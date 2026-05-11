@@ -6,7 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from knowledge_base import FAQ_DATA
 
 # Lowered the threshold so queries like "forgot password" can also be matched
-CONFIDENCE_THRESHOLD = 0.15
+CONFIDENCE_THRESHOLD = 0.20
 
 
 def preprocess(text: str) -> str:
