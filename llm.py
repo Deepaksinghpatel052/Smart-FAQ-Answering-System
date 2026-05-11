@@ -1,6 +1,6 @@
 # llm.py
-# Claude LLM se grounded answer generate karta hai
-# Sirf retrieved FAQ ke basis par — kuch invent nahi karega
+# Generates grounded answers using the Claude LLM
+# Responds only based on retrieved FAQs — does not invent information
 
 import os
 import anthropic
@@ -18,17 +18,18 @@ def get_client():
 
 def generate_grounded_answer(user_query: str, faq: dict) -> str:
     """
-    Claude se natural language answer generate karo.
-    
-    Important: Strict prompt use karo taaki model sirf
-    retrieved FAQ ke basis par answer de — hallucinate na kare.
-    
+    Generate a natural language response using Claude.
+
+    Important:
+        Use a strict prompt to ensure the model responds only
+        based on the retrieved FAQ data and does not hallucinate.
+
     Args:
-        user_query: User ka original question
+        user_query: Original question asked by the user
         faq: Retrieved FAQ entry (id, question, answer)
-    
+
     Returns:
-        Clean, helpful answer string
+        A clean and helpful response string
     """
 
     system_prompt = """You are a precise customer support assistant.

@@ -1,6 +1,6 @@
 # knowledge_base.py
-# Yahan apna FAQ data store hoga
-# Aur entries add karo ya database se load karo
+# Your FAQ data will be stored here
+# Add entries here or load them from the database
 
 FAQ_DATA = [
     {

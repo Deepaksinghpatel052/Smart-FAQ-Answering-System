@@ -1,11 +1,11 @@
 # retrieval.py
-# TF-IDF + Cosine Similarity se FAQ match karta hai
+# Matches FAQs using TF-IDF and Cosine Similarity
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from knowledge_base import FAQ_DATA
 
-# Threshold kam kiya — "forgot password" jaisi queries bhi match hongi
+# Lowered the threshold so queries like "forgot password" can also be matched
 CONFIDENCE_THRESHOLD = 0.15
 
 
@@ -16,13 +16,13 @@ def preprocess(text: str) -> str:
 
 def find_best_match(user_query: str) -> dict:
     """
-    User query ke liye sabse relevant FAQ dhundta hai.
+    Finds the most relevant FAQ for the user's query.
 
     Steps:
-    1. FAQ question + answer dono combine karke TF-IDF vectorize karo
-       (sirf question match karna kaafi nahi — synonyms miss ho jaate hain)
-    2. Cosine similarity calculate karo
-    3. Best match return karo ya fallback do
+    1. Combine both FAQ questions and answers, then apply TF-IDF vectorization
+    (matching only questions is not enough — synonyms and related context may be missed)
+    2. Calculate cosine similarity
+    3. Return the best match or provide a fallback response
     """
 
     if not user_query or not user_query.strip():
@@ -34,15 +34,16 @@ def find_best_match(user_query: str) -> dict:
             "_retrieved_faq": None
         }
 
-    # Question + Answer dono combine karo — better matching ke liye
-    # Example: "forgot password" → "reset password follow email instructions" se match hoga
+    # Combine both the question and answer for better matching
+    # Example: "forgot password" can match with
+    # "reset password by following the email instructions"
     faq_texts = [
         preprocess(item["question"] + " " + item["answer"])
         for item in FAQ_DATA
     ]
     cleaned_query = preprocess(user_query)
 
-    # TF-IDF matrix banao — FAQ texts + user query ek saath
+    # Create a TF-IDF matrix using both the FAQ texts and the user query together
     vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
     all_texts = faq_texts + [cleaned_query]
 
@@ -57,18 +58,18 @@ def find_best_match(user_query: str) -> dict:
             "_retrieved_faq": None
         }
 
-    # User query vector (last row) vs FAQ vectors (baaki sab)
+    # Compare the user query vector (last row) with all FAQ vectors (remaining rows)
     query_vector = tfidf_matrix[-1]
     faq_vectors = tfidf_matrix[:-1]
 
-    # Cosine similarity calculate karo
+    # Calculate cosine similarity
     similarities = cosine_similarity(query_vector, faq_vectors).flatten()
 
-    # Best match index aur score
+    # Get the index and similarity score of the best matching result
     best_idx = int(similarities.argmax())
     best_score = float(similarities[best_idx])
 
-    # Agar score threshold se kam hai → fallback
+    # If the score is below the threshold, return a fallback response
     if best_score < CONFIDENCE_THRESHOLD:
         return {
             "answer": "I don't have enough information to answer this.",
@@ -85,5 +86,5 @@ def find_best_match(user_query: str) -> dict:
         "confidence": round(best_score, 4),
         "source": [best_faq["id"]],
         "fallback": False,
-        "_retrieved_faq": best_faq  # LLM step ke liye internal use (response mein nahi aayega)
+        "_retrieved_faq": best_faq  # Used internally for the LLM step (will not be included in the response)
     }

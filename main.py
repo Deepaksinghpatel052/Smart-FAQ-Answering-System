@@ -1,5 +1,5 @@
 # main.py
-# FastAPI app — /ask endpoint yahan hai
+# FastAPI application — the /ask endpoint is defined here
 
 import os
 import logging
@@ -18,14 +18,14 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
     handlers=[
         logging.StreamHandler(),                        # Console output
-        logging.FileHandler("faq_system.log")          # File mein bhi save hoga
+        logging.FileHandler("faq_system.log")          # Will also be saved in the file
     ]
 )
 logger = logging.getLogger(__name__)
 
 # ─── Use LLM ya nahi? ─────────────────────────────────────────────────────────
-# True  → Claude se better answer milega (ANTHROPIC_API_KEY chahiye)
-# False → Direct FAQ answer return hoga (no API needed)
+# True  → Generates enhanced answers using Claude (requires ANTHROPIC_API_KEY)
+# False → Returns direct FAQ answers without using the API
 USE_LLM = os.getenv("USE_LLM", "true").lower() == "true"
 
 # ─── FastAPI App ──────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ class QueryResponse(BaseModel):
     fallback: bool
 
 class LLMToggleRequest(BaseModel):
-    model_config = ConfigDict(strict=True)  # ← yeh add karo
+    model_config = ConfigDict(strict=True)
     enabled: bool = Field(..., example=True)
 
 
@@ -71,15 +71,15 @@ async def root():
 
 @app.get("/health")
 async def health():
-    """Health check — deployment monitoring ke liye"""
+    """Health check — used for deployment monitoring"""
     return {"status": "ok", "llm_enabled": USE_LLM}
 
 
 @app.get("/llm-status")
 async def llm_status():
     """
-    LLM ka current status check karo.
-    Batayega ki LLM enable hai ya disable, aur kyun.
+    Check the current LLM status.
+    Indicates whether the LLM is enabled or disabled, and explains why.
     """
     return {
         "llm_enabled": USE_LLM,
@@ -95,12 +95,12 @@ async def llm_status():
 @app.post("/llm-toggle")
 async def llm_toggle(request: LLMToggleRequest):
     """
-    LLM ko runtime mein enable ya disable karo.
-    Server restart ki zaroorat nahi!
- 
+    Enable or disable the LLM at runtime.
+    No server restart required!
+
     Request body:
-    - enabled: true  -> LLM on karo
-    - enabled: false -> LLM off karo
+    - enabled: true  -> Enable the LLM
+    - enabled: false -> Disable the LLM
     """
     global USE_LLM
     previous = USE_LLM
@@ -122,12 +122,12 @@ async def llm_toggle(request: LLMToggleRequest):
 @app.post("/ask", response_model=QueryResponse)
 async def ask_question(request: QueryRequest):
     """
-    User query ke basis par FAQ se answer dhundta hai.
-    
-    - TF-IDF + Cosine Similarity se best FAQ match karta hai
-    - Confidence score return karta hai
-    - Low confidence → fallback response
-    - LLM se answer ko natural language mein rephrase karta hai (if enabled)
+    Finds the most relevant answer from the FAQ based on the user's query.
+
+    - Uses TF-IDF and Cosine Similarity to identify the best FAQ match
+    - Returns a confidence score for the matched result
+    - Provides a fallback response for low-confidence matches
+    - Rephrases the answer into natural language using the LLM (if enabled)
     """
 
     logger.info(f"Query received: '{request.query}'")
@@ -135,7 +135,8 @@ async def ask_question(request: QueryRequest):
     # Step 1: TF-IDF retrieval
     result = find_best_match(request.query)
 
-    # Step 2: Agar fallback nahi hai aur LLM enabled hai → better answer generate karo
+    # Step 2: If the response is not a fallback and the LLM is enabled,
+    # generate a more natural and enhanced answer
     if USE_LLM and not result["fallback"] and result.get("_retrieved_faq"):
         try:
             from llm import generate_grounded_answer
@@ -145,7 +146,7 @@ async def ask_question(request: QueryRequest):
         except Exception as e:
             logger.warning(f"LLM failed, using direct FAQ answer. Error: {e}")
 
-    # Step 3: Internal key remove karo before returning
+    # Step 3: Remove internal keys before returning the response
     result.pop("_retrieved_faq", None)
 
     logger.info(
@@ -158,6 +159,6 @@ async def ask_question(request: QueryRequest):
 
 @app.get("/faqs")
 async def list_faqs():
-    """Saare available FAQs dekho"""
+    """View all available FAQs"""
     from knowledge_base import FAQ_DATA
     return {"total": len(FAQ_DATA), "faqs": FAQ_DATA}
